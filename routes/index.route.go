@@ -4,6 +4,7 @@ import (
 	"fiber-api/config"
 	"fiber-api/handler"
 	"fiber-api/middleware"
+	"fiber-api/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -22,4 +23,7 @@ func RouteInit(r *fiber.App)  {
 	r.Put("/user/:id", handler.UserHandlerUpdate)
 	r.Put("/user/:id/update-email", handler.UserHandlerUpdateEmail)
 	r.Delete("/user/:id", handler.UserHandlerDelete)
+
+	// Book
+	r.Post("/book", utils.HandleSingleFile, handler.BookHandlerCreate)
 }
