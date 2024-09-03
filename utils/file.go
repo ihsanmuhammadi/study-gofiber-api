@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"mime/multipart"
 	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -20,13 +23,40 @@ func HandleSingleFile(ctx *fiber.Ctx) error {
 	var filename *string
 	// Cek ada file yang diupload atau tidak
 	if file != nil {
+		// Validasi tipe file
+		errCheckContentType := checkContentType(file, "image/jpg", "image/png", "image/gif")
+		if errCheckContentType != nil {
+			return ctx.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+				"message": errCheckContentType.Error(),
+			})
+		}
 		filename = &file.Filename
+		extensionFile := filepath.Ext(*filename)
+		newFilename := fmt.Sprintf("gambar-satu%s", extensionFile)
 
 		// Mengembalikan tipe data error
-		errSaveFile := ctx.SaveFile(file, fmt.Sprintf("./public/covers/%s", *filename))
+		errSaveFile := ctx.SaveFile(file, fmt.Sprintf("./public/covers/%s", newFilename))
 		if errSaveFile != nil {
 			log.Println("Fail to store file into public/covers directory.")
 		}
+		// contentTypeFile := file.Header.Get("Content-Type")
+		// log.Println("Content Type = ", contentTypeFile)
+
+		// if contentTypeFile == "image/jpg" || contentTypeFile == "image/png" {
+		// 	filename = &file.Filename
+		// 	extensionFile := filepath.Ext(*filename)
+		// 	newFilename := fmt.Sprintf("gambar-satu%s", extensionFile)
+
+		// 	// Mengembalikan tipe data error
+		// 	errSaveFile := ctx.SaveFile(file, fmt.Sprintf("./public/covers/%s", newFilename))
+		// 	if errSaveFile != nil {
+		// 		log.Println("Fail to store file into public/covers directory.")
+		// 	}
+		// } else {
+		// 	return ctx.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+		// 		"message": "Only allow .jpg and .png file",
+		// 	})
+		// }
 	} else {
 		log.Println("There is no file to be uploaded.")
 	}
@@ -57,7 +87,8 @@ func HandleMultipleFile(ctx *fiber.Ctx) error {
 		var filename string
 		// Cek ada file yang diupload atau tidak
 		if file != nil {
-			filename = fmt.Sprintf("%d-%s", i, file.Filename)
+			extensionFile := filepath.Ext(file.Filename)
+			filename = fmt.Sprintf("%d-%s%s", i, "gambar", extensionFile)
 
 			// Mengembalikan tipe data error
 			errSaveFile := ctx.SaveFile(file, fmt.Sprintf("./public/covers/%s", filename))
@@ -91,6 +122,19 @@ func HandleRemoveFile(filename string, pathFile ...string) error {
 			return err
 		}
 	}
-
 	return nil
+}
+
+func checkContentType(file *multipart.FileHeader, contentTypes ...string) error {
+	if len(contentTypes) > 0 {
+		for _, contentType := range contentTypes {
+			contentTypeFile := file.Header.Get("Content-Type")
+			if contentTypeFile == contentType {
+				return nil
+			}
+		}
+		return errors.New("not allowed this type of file")
+	} else {
+		return errors.New("not found content type to be checking")
+	}
 }
