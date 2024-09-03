@@ -1,9 +1,11 @@
 package handler
 
 import (
-
+	"fiber-api/database"
+	"fiber-api/model/entity"
 	"fiber-api/model/request"
-	"fmt"
+	"fiber-api/utils"
+
 	"log"
 
 	"github.com/go-playground/validator/v10"
@@ -31,7 +33,7 @@ func PhotoHandlerCreate(ctx *fiber.Ctx) error {
 	}
 
 	// Handle jika file "required"
-	var filenameString string
+	// var filenameString string
 
 	// Get filename
 	filenames := ctx.Locals("filenames")
@@ -43,11 +45,25 @@ func PhotoHandlerCreate(ctx *fiber.Ctx) error {
 		})
 	} else {
 		// Mengubah filename menjadi string
-		filenameString = fmt.Sprintf("%v", filenames)
+		// filenameString = fmt.Sprintf("%v", filenames)
+		filenamesData := filenames.([]string)
+		for _, filename := range filenamesData {
+			// New photo
+			newPhoto := entity.Photo{
+				Image: filename,
+				CategoryID: photo.CategoryId,
+			}
+
+			errCreatePhoto := database.DB.Create(&newPhoto).Error
+			if errCreatePhoto != nil {
+				log.Println("Some data not saved properly.")
+			}
+		}
 	}
 
-	log.Println(filenameString)
-	// // New book
+	// log.Println("filenames :: ", filenameString)
+
+	// // New photo
 	// newPhoto := entity.Photo{
 	// 	Image: filename,
 	// 	CategoryID: 1,
@@ -64,5 +80,37 @@ func PhotoHandlerCreate(ctx *fiber.Ctx) error {
 		"message": "success",
 		// "data": newPhoto,
 	})
+}
 
+func PhotoHandlerDelete(ctx *fiber.Ctx) error {
+	photoId := ctx.Params("id")
+
+	var photo entity.Photo
+
+	// Check availability photo
+	err := database.DB.Debug().First(&photo, "id=?", photoId).Error
+	if err != nil {
+		return ctx.Status(404).JSON(fiber.Map{
+			"message": "photo not found",
+		})
+	}
+
+	// Delete file di directory
+	errDeleteFile := utils.HandleRemoveFile(photo.Image)
+
+	if errDeleteFile != nil {
+		log.Println("Fail to delete some file")
+	}
+
+	// Delete file di database
+	errDelete := database.DB.Debug().Delete(&photo).Error
+	if errDelete != nil {
+		return ctx.Status(500).JSON(fiber.Map{
+			"message": "internal server error",
+		})
+	}
+
+	return ctx.JSON(fiber.Map{
+		"message": "photo was deleted",
+	})
 }

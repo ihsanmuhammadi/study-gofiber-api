@@ -3,8 +3,12 @@ package utils
 import (
 	"fmt"
 	"log"
+	"os"
+
 	"github.com/gofiber/fiber/v2"
 )
+
+const DefaultPathAssetImage = "./public/covers/"
 
 func HandleSingleFile(ctx *fiber.Ctx) error {
 	// Handle file
@@ -41,13 +45,14 @@ func HandleSingleFile(ctx *fiber.Ctx) error {
 
 func HandleMultipleFile(ctx *fiber.Ctx) error {
 	form, errForm := ctx.MultipartForm()
-	if errForm != nil{
+	if errForm != nil {
 		log.Println("Error Read Multipart Form Request, Error = ", errForm)
 	}
 
 	files := form.File["photos"]
 
 	var filenames []string
+
 	for i, file := range files {
 		var filename string
 		// Cek ada file yang diupload atau tidak
@@ -66,8 +71,26 @@ func HandleMultipleFile(ctx *fiber.Ctx) error {
 		if filename != "" {
 			filenames = append(filenames, filename)
 		}
-
-		ctx.Locals("filenames", filenames)
 	}
+	ctx.Locals("filenames", filenames)
+
 	return ctx.Next()
+}
+
+func HandleRemoveFile(filename string, pathFile ...string) error {
+	if len(pathFile) > 0 {
+		err := os.Remove(pathFile[0] + filename)
+		if err != nil {
+			log.Println("Failed to remove file.")
+			return err
+		}
+	} else {
+		err := os.Remove(DefaultPathAssetImage + filename)
+		if err != nil {
+			log.Println("Failed to remove file.")
+			return err
+		}
+	}
+
+	return nil
 }

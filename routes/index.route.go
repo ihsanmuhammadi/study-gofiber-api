@@ -29,4 +29,5 @@ func RouteInit(r *fiber.App)  {
 
 	// Gallery
 	r.Post("/gallery", utils.HandleMultipleFile, handler.PhotoHandlerCreate)
+	r.Delete("/gallery/:id", utils.HandleMultipleFile, handler.PhotoHandlerDelete)
 }
